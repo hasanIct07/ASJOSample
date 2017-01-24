@@ -10,15 +10,24 @@ import UIKit
 import Alamofire
 import ObjectMapper
 import SwiftyJSON
+import MBProgressHUD
+import SDWebImage
+import AlamofireImage
 
 class ViewController: UIViewController {
+    
+    @IBOutlet weak var imageView1: UIImageView!
+    @IBOutlet weak var imageView2: UIImageView!
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         //webCall()
         //callObjectMapper()
-        callSwiftyJSON()
+        //callSwiftyJSON()
+        callWebService()
+        loadImage()
     }
     
     
@@ -102,16 +111,20 @@ class ViewController: UIViewController {
     
     func callSwiftyJSON() {
         
+        let HUD = MBProgressHUD.showHUDAddedTo(self.view, animated: true)
+        
         let urlString = "https://raw.githubusercontent.com/tristanhimmelman/AlamofireObjectMapper/d8bb95982be8a11a2308e779bb9a9707ebe42ede/sample_json"
         
         Alamofire.request(.GET, urlString).response { request, response, data, error in
             
             let json = JSON(data: data!)
             
+            HUD.hide(true)
+            
             let condition = json["three_day_forecast"][1]["conditions"].string
             let day = json["three_day_forecast"][1]["day"].string
             let temp = json["three_day_forecast"][1]["temperature"].int
-    
+            
             print(condition)
             print(day)
             print(temp)
@@ -119,8 +132,49 @@ class ViewController: UIViewController {
     }
     
     
-    //MARK:- Convert NSData to JSON
+    func callWebService(){
+        //Test Check API - 01
+        WebServiceHandler.sharedInstance.getUserInfo{ result, returnData in
+            if result {
+                print("Check API - 01: success")
+                var userInfo = returnData[Constants.MSG_KEY] as! UserInfo
+            }else{
+                print("Check API - 01: failed")
+                print(returnData[Constants.MSG_KEY]!)
+            }
+        }
+    }
+    
+    func loadImage(){
 
+        let url = NSURL(string: "https://httpbin.org/image/png")!
+        let placeholderImage = UIImage(named:"placeholder.png")!
+        
+        self.imageView1.sd_setImageWithURL(NSURL(string: "http://www.domain.com/path/to/image.jpg"), placeholderImage:placeholderImage)
+        
+        
+        self.imageView2.af_setImageWithURL(url, placeholderImage: placeholderImage)
+        
+        /*
+        Alamofire.request(.GET, "https://httpbin.org/image/png").responseImage { response in
+            if let image = response.result.value {
+                print("image downloaded: \(image)")
+                self.imageView2.image = image
+            }
+        }
+        
+        let filter = AspectScaledToFillSizeWithRoundedCornersFilter(
+            size: self.imageView2.frame.size,
+            radius: 20.0
+        )
+        self.imageView2.af_setImageWithURL(url, placeholderImage: placeholderImage, filter: filter)
+        */
+        
+    }
+    
+    
+    //MARK:- Convert NSData to JSON
+    
     func nsdataToJSON(data: NSData) -> AnyObject? {
         do {
             return try NSJSONSerialization.JSONObjectWithData(data, options: .MutableContainers)
@@ -129,7 +183,7 @@ class ViewController: UIViewController {
         }
         return nil
     }
-
+    
     func jsonToNSData(json: AnyObject) -> NSData?{
         do {
             return try NSJSONSerialization.dataWithJSONObject(json, options: NSJSONWritingOptions.PrettyPrinted)
